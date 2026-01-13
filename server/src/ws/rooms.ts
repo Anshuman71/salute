@@ -1,5 +1,7 @@
 import type { GameState, Player, Card, ServerMessage, RoomSettings } from '../game/types';
 import { createGameDeck, shuffle, dealCards, calculateHandScore, getRoundSequence, generatePlayerId } from '../game/logic';
+import { db, schema } from '../db';
+import { eq } from 'drizzle-orm';
 
 // In-memory game state for each room
 const gameStates = new Map<string, GameState>();
@@ -43,6 +45,15 @@ export function createRoom(roomCode: string, hostName: string, hostSessionId: st
 export function joinRoom(roomCode: string, playerName: string, sessionId: string): { playerId: string; state: GameState } | null {
   const state = gameStates.get(roomCode);
   if (!state) return null;
+  
+  // Check if player already exists with this sessionId (for re-joins)
+  const existingPlayer = state.players.find(p => p.sessionId === sessionId);
+  if (existingPlayer) {
+    existingPlayer.isConnected = true;
+    return { playerId: existingPlayer.id, state };
+  }
+
+  // Only allow new joins if game hasn't started
   if (state.roundPhase !== 'waiting') return null;
   
   const playerId = generatePlayerId();
@@ -89,6 +100,12 @@ export function startGame(roomCode: string, callerSessionId: string): GameState 
   state.currentPlayerIndex = 0;
   state.turnsPlayedThisRound = 0;
   state.lastPlayerWhoPlayed = null;
+  
+  // Update DB
+  db.update(schema.rooms)
+    .set({ status: 'playing', currentRound: 1 })
+    .where(eq(schema.rooms.code, roomCode))
+    .run();
   
   return state;
 }
@@ -192,6 +209,28 @@ export function callWin(roomCode: string, sessionId: string): GameState | { erro
   
   roundWinner.roundsWon++;
   
+  // Record round in DB
+  const dbRoom = db.select().from(schema.rooms).where(eq(schema.rooms.code, roomCode)).get();
+  
+  if (dbRoom) {
+    const scoresMap = state.players.reduce((acc, p) => {
+      acc[p.name] = calculateHandScore(p.hand);
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Get DB player ID for the winner
+    const dbWinner = db.select().from(schema.players).where(eq(schema.players.sessionId, roundWinner.sessionId)).get();
+
+    if (dbWinner) {
+      db.insert(schema.gameRounds).values({
+        roomId: dbRoom.id,
+        roundNumber: state.currentRound,
+        winnerId: dbWinner.id,
+        scores: JSON.stringify(scoresMap),
+      }).run();
+    }
+  }
+
   const roundSequence = getRoundSequence(state.totalRounds);
   
   if (state.currentRound >= roundSequence.length) {
@@ -199,6 +238,19 @@ export function callWin(roomCode: string, sessionId: string): GameState | { erro
     const maxWins = Math.max(...state.players.map(p => p.roundsWon));
     state.gameWinner = state.players.find(p => p.roundsWon === maxWins) || null;
     state.roundPhase = 'finished';
+
+    // Update DB with final winner and status
+    if (state.gameWinner) {
+      const dbWinner = db.select().from(schema.players).where(eq(schema.players.sessionId, state.gameWinner.sessionId)).get();
+
+      db.update(schema.rooms)
+        .set({ 
+          status: 'finished', 
+          winnerId: dbWinner?.id 
+        })
+        .where(eq(schema.rooms.code, roomCode))
+        .run();
+    }
   } else {
     state.roundPhase = 'scoring';
   }
@@ -240,6 +292,12 @@ export function nextRound(roomCode: string): GameState | { error: string } {
   state.lastPlayerWhoPlayed = null;
   state.lastPlayedCards = [];
   
+  // Update DB round number
+  db.update(schema.rooms)
+    .set({ currentRound: nextRoundNum })
+    .where(eq(schema.rooms.code, roomCode))
+    .run();
+  
   return state;
 }
 
@@ -254,12 +312,7 @@ export function removePlayer(roomCode: string, sessionId: string): void {
   const playerIndex = state.players.findIndex(p => p.sessionId === sessionId);
   if (playerIndex !== -1) {
     state.players[playerIndex].isConnected = false;
-  }
-  
-  // If all players disconnected, clean up
-  if (state.players.every(p => !p.isConnected)) {
-    gameStates.delete(roomCode);
-    roomConnections.delete(roomCode);
+    console.log(`[Room] Player ${state.players[playerIndex].name} disconnected from ${roomCode}`);
   }
 }
 

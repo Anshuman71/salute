@@ -15,17 +15,18 @@ const app = new Elysia()
   .get('/', () => ({ status: 'ok', message: 'Salute Game Server' }))
   .get('/health', () => ({ status: 'healthy', timestamp: new Date().toISOString() }))
   .ws('/ws', {
-    open(ws) {
-      const sessionId = crypto.randomUUID();
+    open(ws: any) {
+      const sessionId = (ws.data.query.sessionId as string) || crypto.randomUUID();
       const ip = ws.remoteAddress || 'unknown';
       
-      ws.data = { sessionId, ip } as WSData;
+      ws.data.sessionId = sessionId;
+      ws.data.ip = ip;
       console.log(`[WS] Connected: ${sessionId} from ${ip}`);
     },
     message(ws, message) {
-      handleMessage(ws as any, String(message));
+      handleMessage(ws as any, message);
     },
-    close(ws) {
+    close(ws: any) {
       handleClose(ws as any);
       console.log(`[WS] Disconnected: ${ws.data?.sessionId}`);
     },

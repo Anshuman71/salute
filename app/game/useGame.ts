@@ -24,6 +24,7 @@ interface ExtendedGameState extends GameState {
 }
 
 const initialState: ExtendedGameState = {
+  roomCode: '',
   players: [],
   deck: [],
   discardPile: [],
@@ -31,8 +32,7 @@ const initialState: ExtendedGameState = {
   currentRound: 0,
   totalRounds: 5,
   cardsPerRound: 5,
-  roundPhase: 'setup',
-  roundDirection: 'decreasing',
+  roundPhase: 'waiting',
   faceUpCard: null,
   gameWinner: null,
   turnPhase: 'play',
@@ -75,7 +75,6 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
         totalRounds,
         cardsPerRound,
         roundPhase: 'playing',
-        roundDirection: 'decreasing',
         faceUpCard,
         gameWinner: null,
         turnPhase: 'play',
@@ -252,7 +251,6 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
       }
       
       const cardsPerRound = roundSequence[nextRound - 1];
-      const roundDirection = cardsPerRound <= 2 ? 'increasing' : state.roundDirection;
       
       // Create fresh deck
       const deck = shuffle(createGameDeck(state.players.length));
@@ -273,7 +271,6 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
         currentRound: nextRound,
         cardsPerRound,
         roundPhase: 'playing',
-        roundDirection,
         faceUpCard,
         turnPhase: 'play',
         lastPlayedCards: [],

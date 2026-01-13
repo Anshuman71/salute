@@ -55,7 +55,7 @@ export type ClientMessage =
   | { type: 'leave_room' };
 
 export type ServerMessage =
-  | { type: 'room_created'; roomCode: string; playerId: string }
+  | { type: 'room_created'; roomCode: string; playerId: string; players: { id: string; name: string; isHost: boolean }[] }
   | { type: 'room_joined'; roomCode: string; playerId: string; players: { id: string; name: string; isHost: boolean }[] }
   | { type: 'player_joined'; player: { id: string; name: string } }
   | { type: 'player_left'; playerId: string }

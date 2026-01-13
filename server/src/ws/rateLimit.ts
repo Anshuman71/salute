@@ -1,5 +1,5 @@
 import { db, schema } from '../db';
-import { eq, and, gt } from 'drizzle-orm';
+import { eq, and, gt, lt } from 'drizzle-orm';
 
 interface RateLimitConfig {
   maxRequests: number;
@@ -7,7 +7,7 @@ interface RateLimitConfig {
 }
 
 const RATE_LIMITS: Record<string, RateLimitConfig> = {
-  create_room: { maxRequests: 5, windowMs: 60 * 60 * 1000 }, // 5 per hour
+  create_room: { maxRequests: 500, windowMs: 60 * 60 * 1000 }, // 5 per hour
   join_room: { maxRequests: 10, windowMs: 60 * 1000 }, // 10 per minute
 };
 
@@ -58,6 +58,6 @@ export function checkRateLimit(ip: string, action: 'create_room' | 'join_room'):
 export function cleanupRateLimits(): void {
   const oldestAllowed = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
   db.delete(schema.rateLimits)
-    .where(gt(oldestAllowed, schema.rateLimits.windowStart))
+    .where(lt(schema.rateLimits.windowStart, oldestAllowed))
     .run();
 }

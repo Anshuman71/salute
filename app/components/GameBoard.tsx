@@ -22,6 +22,7 @@ interface GameBoardProps {
   callWin: (playerId: string) => void;
   nextRound: () => void;
   resetGame: () => void;
+  playerId?: string;
 }
 
 export default function GameBoard({
@@ -32,10 +33,12 @@ export default function GameBoard({
   callWin,
   nextRound,
   resetGame,
+  playerId,
 }: GameBoardProps) {
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
 
   const currentPlayer = state.players[state.currentPlayerIndex];
+  const isMyTurn = playerId ? currentPlayer?.id === playerId : true;
   const topDiscardCard = state.discardPile[state.discardPile.length - 1];
   const roundSequence = getRoundSequence(state.totalRounds);
   const isPlayPhase = state.turnPhase === 'play';
@@ -43,7 +46,8 @@ export default function GameBoard({
 
   // Check if all players have played at least once AND current player didn't just play
   const canDeclareWin = state.turnsPlayedThisRound >= state.players.length 
-    && currentPlayer?.id !== state.lastPlayerWhoPlayed;
+    && currentPlayer?.id !== state.lastPlayerWhoPlayed
+    && isMyTurn;
 
   // Get last 3 cards from discard pile for stacked display
   const stackedDiscardCards = state.discardPile.slice(-3);
@@ -111,7 +115,7 @@ export default function GameBoard({
   };
 
   const handleDraw = (fromDeck: boolean) => {
-    if (isDrawPhase) {
+    if (isDrawPhase && isMyTurn) {
       soundManager.playDraw();
       if (fromDeck) {
         drawFromDeck();
@@ -122,7 +126,7 @@ export default function GameBoard({
   };
 
   const handleCallWin = () => {
-    if (canDeclareWin) {
+    if (canDeclareWin && isMyTurn) {
       soundManager.playWin();
       callWin(currentPlayer.id);
     }
@@ -326,19 +330,22 @@ export default function GameBoard({
 
         {/* Players */}
         <div className="lg:col-span-2 space-y-4">
-          {state.players.map((player, idx) => (
-            <PlayerHand
-              key={player.id}
-              cards={player.hand}
-              isCurrentPlayer={idx === state.currentPlayerIndex}
-              selectedCardIds={idx === state.currentPlayerIndex ? selectedCardIds : new Set()}
-              onCardClick={handleCardClick}
-              playerName={player.name}
-              roundsWon={player.roundsWon}
-              canInteract={idx === state.currentPlayerIndex && isPlayPhase}
-              cardsByRank={idx === state.currentPlayerIndex ? cardsByRank : new Map()}
-            />
-          ))}
+          {state.players.map((player, idx) => {
+            const isMe = playerId ? player.id === playerId : idx === state.currentPlayerIndex;
+            return (
+              <PlayerHand
+                key={player.id}
+                cards={player.hand}
+                isCurrentPlayer={idx === state.currentPlayerIndex}
+                selectedCardIds={idx === state.currentPlayerIndex && isMyTurn ? selectedCardIds : new Set()}
+                onCardClick={handleCardClick}
+                playerName={player.name + (playerId && player.id === playerId ? ' (You)' : '')}
+                roundsWon={player.roundsWon}
+                canInteract={idx === state.currentPlayerIndex && isPlayPhase && isMyTurn}
+                cardsByRank={idx === state.currentPlayerIndex && isMyTurn ? cardsByRank : new Map()}
+              />
+            );
+          })}
         </div>
       </div>
 
