@@ -11,6 +11,7 @@ interface ExtendedGameState extends GameState {
   turnPhase: 'play' | 'draw';
   lastPlayedCards: CardType[];
   turnsPlayedThisRound: number;
+  lastPlayerWhoPlayed: string | null;
 }
 
 interface GameBoardProps {
@@ -40,8 +41,9 @@ export default function GameBoard({
   const isPlayPhase = state.turnPhase === 'play';
   const isDrawPhase = state.turnPhase === 'draw';
 
-  // Check if all players have played at least once
-  const canDeclareWin = state.turnsPlayedThisRound >= state.players.length;
+  // Check if all players have played at least once AND current player didn't just play
+  const canDeclareWin = state.turnsPlayedThisRound >= state.players.length 
+    && currentPlayer?.id !== state.lastPlayerWhoPlayed;
 
   // Get last 3 cards from discard pile for stacked display
   const stackedDiscardCards = state.discardPile.slice(-3);

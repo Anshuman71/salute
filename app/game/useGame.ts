@@ -20,6 +20,7 @@ interface ExtendedGameState extends GameState {
   turnPhase: TurnPhase; // Track whether player should play or draw
   lastPlayedCards: Card[]; // Cards just played (shown before picking)
   turnsPlayedThisRound: number; // How many complete turns have happened this round
+  lastPlayerWhoPlayed: string | null; // ID of player who last completed a turn (can't call win immediately after)
 }
 
 const initialState: ExtendedGameState = {
@@ -37,6 +38,7 @@ const initialState: ExtendedGameState = {
   turnPhase: 'play',
   lastPlayedCards: [],
   turnsPlayedThisRound: 0,
+  lastPlayerWhoPlayed: null,
 };
 
 function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGameState {
@@ -79,6 +81,7 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
         turnPhase: 'play',
         lastPlayedCards: [],
         turnsPlayedThisRound: 0,
+        lastPlayerWhoPlayed: null,
       };
     }
 
@@ -136,12 +139,15 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
         turnPhase: 'play',
         lastPlayedCards: [],
         turnsPlayedThisRound: state.turnsPlayedThisRound + 1,
+        lastPlayerWhoPlayed: currentPlayer.id,
       };
     }
 
     case 'DRAW_FROM_DISCARD': {
       if (state.turnPhase !== 'draw') return state;
       if (state.discardPile.length === 0) return state;
+      
+      const currentPlayer = state.players[state.currentPlayerIndex];
       
       // Pick the top card from discard (before the just-played cards)
       const drawnCard = state.discardPile[state.discardPile.length - 1];
@@ -167,6 +173,7 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
         turnPhase: 'play',
         lastPlayedCards: [],
         turnsPlayedThisRound: state.turnsPlayedThisRound + 1,
+        lastPlayerWhoPlayed: currentPlayer.id,
       };
     }
 
@@ -271,6 +278,7 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
         turnPhase: 'play',
         lastPlayedCards: [],
         turnsPlayedThisRound: 0,
+        lastPlayerWhoPlayed: null,
       };
     }
 
