@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { GameState, Card as CardType } from '../game/types';
 import { calculateHandScore, getRoundSequence } from '../game/deck';
+import { soundManager } from '../game/sounds';
 import Card from './Card';
 import PlayerHand from './PlayerHand';
 
 interface ExtendedGameState extends GameState {
   turnPhase: 'play' | 'draw';
   lastPlayedCards: CardType[];
+  turnsPlayedThisRound: number;
 }
 
 interface GameBoardProps {
@@ -38,6 +40,12 @@ export default function GameBoard({
   const isPlayPhase = state.turnPhase === 'play';
   const isDrawPhase = state.turnPhase === 'draw';
 
+  // Check if all players have played at least once
+  const canDeclareWin = state.turnsPlayedThisRound >= state.players.length;
+
+  // Get last 3 cards from discard pile for stacked display
+  const stackedDiscardCards = state.discardPile.slice(-3);
+
   // Group cards by rank to determine if multi-select is needed
   const cardsByRank = useMemo(() => {
     if (!currentPlayer) return new Map<string, CardType[]>();
@@ -57,8 +65,11 @@ export default function GameBoard({
   const handleCardClick = (card: CardType) => {
     if (!isPlayPhase) return;
 
+    soundManager.playSelect();
+
     // If card has no duplicates, play immediately
     if (!hasDuplicates(card)) {
+      soundManager.playThrow();
       playCards([card.id]);
       setSelectedCardIds(new Set());
       return;
@@ -91,6 +102,7 @@ export default function GameBoard({
 
   const handlePlaySelected = () => {
     if (selectedCardIds.size > 0) {
+      soundManager.playThrow();
       playCards(Array.from(selectedCardIds));
       setSelectedCardIds(new Set());
     }
@@ -98,6 +110,7 @@ export default function GameBoard({
 
   const handleDraw = (fromDeck: boolean) => {
     if (isDrawPhase) {
+      soundManager.playDraw();
       if (fromDeck) {
         drawFromDeck();
       } else {
@@ -107,7 +120,10 @@ export default function GameBoard({
   };
 
   const handleCallWin = () => {
-    callWin(currentPlayer.id);
+    if (canDeclareWin) {
+      soundManager.playWin();
+      callWin(currentPlayer.id);
+    }
   };
 
   // Scoring phase
@@ -219,7 +235,14 @@ export default function GameBoard({
         </div>
         <button
           onClick={handleCallWin}
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-pink-500 text-white font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 animate-pulse"
+          disabled={!canDeclareWin}
+          className={`
+            px-6 py-3 rounded-xl font-bold shadow-lg transition-all duration-300
+            ${canDeclareWin 
+              ? 'bg-gradient-to-r from-amber-500 to-pink-500 text-white hover:shadow-xl hover:scale-105' 
+              : 'bg-gray-600 text-gray-400 cursor-not-allowed'}
+          `}
+          title={!canDeclareWin ? 'All players must play at least one card first' : 'Declare victory!'}
         >
           🎯 I Win!
         </button>
@@ -240,12 +263,12 @@ export default function GameBoard({
       {/* Game Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         {/* Deck, Last Played, and Discard */}
-        <div className="lg:col-span-1 flex lg:flex-col gap-4 justify-center items-center bg-white/5 rounded-2xl p-4 border border-white/10">
+        <div className="lg:col-span-1 flex lg:flex-col gap-6 justify-center items-center bg-white/5 rounded-2xl p-4 border border-white/10">
           {/* Deck */}
           <div className="text-center">
             <p className="text-gray-400 text-sm mb-2">Deck ({state.deck.length})</p>
             <div 
-              className={`transition-all duration-200 ${isDrawPhase ? 'cursor-pointer hover:scale-105 ring-2 ring-emerald-400/50 rounded-lg' : 'opacity-50 cursor-not-allowed'}`}
+              className={`transition-all duration-200 ${isDrawPhase ? 'cursor-pointer hover:scale-105 ring-2 ring-emerald-400/50 rounded-lg' : 'opacity-60 cursor-not-allowed'}`}
               onClick={() => handleDraw(true)}
             >
               <Card card={{ id: 'deck', suit: 'spades', rank: 'A', value: 1 }} faceDown />
@@ -264,15 +287,32 @@ export default function GameBoard({
             </div>
           )}
 
-          {/* Discard Pile */}
+          {/* Discard Pile - Stacked with rotation */}
           <div className="text-center">
             <p className="text-gray-400 text-sm mb-2">Discard ({state.discardPile.length})</p>
-            {topDiscardCard ? (
+            {stackedDiscardCards.length > 0 ? (
               <div 
-                className={`transition-all duration-200 ${isDrawPhase ? 'cursor-pointer hover:scale-105 ring-2 ring-emerald-400/50 rounded-lg' : 'opacity-50 cursor-not-allowed'}`}
+                className={`relative w-24 h-32 transition-all duration-200 ${isDrawPhase ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                 onClick={() => handleDraw(false)}
               >
-                <Card card={topDiscardCard} />
+                {stackedDiscardCards.map((card, index) => {
+                  const isTop = index === stackedDiscardCards.length - 1;
+                  const rotation = (index - 1) * 15; // -15, 0, 15 degrees
+                  const zIndex = index;
+                  
+                  return (
+                    <div
+                      key={card.id}
+                      className={`absolute left-1/2 top-0 -translate-x-1/2 transition-all duration-200 ${isTop && isDrawPhase ? 'ring-2 ring-emerald-400/50 rounded-lg hover:scale-105' : ''}`}
+                      style={{ 
+                        transform: `translateX(-50%) rotate(${rotation}deg)`,
+                        zIndex,
+                      }}
+                    >
+                      <Card card={card} />
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="w-20 h-28 rounded-lg border-2 border-dashed border-gray-600 flex items-center justify-center text-gray-600">

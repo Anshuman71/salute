@@ -19,6 +19,7 @@ type GameAction =
 interface ExtendedGameState extends GameState {
   turnPhase: TurnPhase; // Track whether player should play or draw
   lastPlayedCards: Card[]; // Cards just played (shown before picking)
+  turnsPlayedThisRound: number; // How many complete turns have happened this round
 }
 
 const initialState: ExtendedGameState = {
@@ -35,6 +36,7 @@ const initialState: ExtendedGameState = {
   gameWinner: null,
   turnPhase: 'play',
   lastPlayedCards: [],
+  turnsPlayedThisRound: 0,
 };
 
 function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGameState {
@@ -76,6 +78,7 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
         gameWinner: null,
         turnPhase: 'play',
         lastPlayedCards: [],
+        turnsPlayedThisRound: 0,
       };
     }
 
@@ -132,6 +135,7 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
         currentPlayerIndex: nextPlayerIndex,
         turnPhase: 'play',
         lastPlayedCards: [],
+        turnsPlayedThisRound: state.turnsPlayedThisRound + 1,
       };
     }
 
@@ -162,6 +166,7 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
         currentPlayerIndex: nextPlayerIndex,
         turnPhase: 'play',
         lastPlayedCards: [],
+        turnsPlayedThisRound: state.turnsPlayedThisRound + 1,
       };
     }
 
@@ -265,6 +270,7 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
         faceUpCard,
         turnPhase: 'play',
         lastPlayedCards: [],
+        turnsPlayedThisRound: 0,
       };
     }
 
