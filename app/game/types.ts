@@ -38,6 +38,8 @@ export interface GameState {
   lastPlayerWhoPlayed: string | null;
   faceUpCard: Card | null;
   gameWinner: Player | null;
+  settings: RoomSettings;
+  hostPlayerId: string;
 }
 
 export interface RoomSettings {
@@ -51,19 +53,27 @@ export interface GameSettings {
   playerNames: string[];
 }
 
+export interface BaseClientMessage {
+  roomCode: string | null;
+  playerId: string;
+}
+
 // WebSocket message types
 export type ClientMessage =
-  | { type: 'create_room'; playerName: string; settings: RoomSettings }
-  | { type: 'join_room'; code: string; playerName: string }
-  | { type: 'start_game' }
-  | { type: 'play_cards'; cardIds: string[] }
-  | { type: 'draw_card'; source: 'deck' | 'discard' }
-  | { type: 'call_win' }
-  | { type: 'leave_room' };
+  (| { type: 'create_room'; playerName: string; settings: RoomSettings }
+    | { type: 'join_room'; code: string; playerName: string }
+    | { type: 'start_game'; }
+    | { type: 'play_cards'; cardIds: string[] }
+    | { type: 'draw_card'; source: 'deck' | 'discard' }
+    | { type: 'call_win' }
+    | { type: 'leave_room' }
+    | { type: 'next_round' }
+    | { type: 'update_settings'; settings: RoomSettings }) & BaseClientMessage;
 
 export type ServerMessage =
   | { type: 'room_created'; roomCode: string; playerId: string; players: { id: string; name: string; isHost: boolean }[] }
-  | { type: 'room_joined'; roomCode: string; playerId: string; players: { id: string; name: string; isHost: boolean }[] }
+  | { type: 'room_joined'; roomCode: string; playerId: string; players: { id: string; name: string; isHost: boolean }[]; settings: RoomSettings }
+  | { type: 'room_updated'; settings: RoomSettings }
   | { type: 'player_joined'; player: { id: string; name: string } }
   | { type: 'player_left'; playerId: string }
   | { type: 'game_started' }

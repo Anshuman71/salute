@@ -7,14 +7,14 @@ interface RateLimitConfig {
 }
 
 const RATE_LIMITS: Record<string, RateLimitConfig> = {
-  create_room: { maxRequests: 500, windowMs: 60 * 60 * 1000 }, // 5 per hour
-  join_room: { maxRequests: 10, windowMs: 60 * 1000 }, // 10 per minute
+  create_room: { maxRequests: Number(process.env.RATE_LIMIT_CREATE_ROOM || 5), windowMs: 60 * 60 * 1000 }, // 5 per hour
+  join_room: { maxRequests: Number(process.env.RATE_LIMIT_JOIN_ROOM || 10), windowMs: 60 * 1000 }, // 10 per minute
 };
 
 export function checkRateLimit(ip: string, action: 'create_room' | 'join_room'): { allowed: boolean; retryAfterMs?: number } {
   const config = RATE_LIMITS[action];
   const windowStart = new Date(Date.now() - config.windowMs);
-  
+
   // Find existing rate limit record
   const existing = db
     .select()
@@ -27,7 +27,7 @@ export function checkRateLimit(ip: string, action: 'create_room' | 'join_room'):
       )
     )
     .get();
-  
+
   if (!existing) {
     // Create new record
     db.insert(schema.rateLimits).values({
@@ -36,21 +36,21 @@ export function checkRateLimit(ip: string, action: 'create_room' | 'join_room'):
       count: 1,
       windowStart: new Date(),
     }).run();
-    
+
     return { allowed: true };
   }
-  
+
   if (existing.count >= config.maxRequests) {
     const retryAfterMs = existing.windowStart.getTime() + config.windowMs - Date.now();
     return { allowed: false, retryAfterMs };
   }
-  
+
   // Increment count
   db.update(schema.rateLimits)
     .set({ count: existing.count + 1 })
     .where(eq(schema.rateLimits.id, existing.id))
     .run();
-  
+
   return { allowed: true };
 }
 
@@ -61,3 +61,5 @@ export function cleanupRateLimits(): void {
     .where(lt(schema.rateLimits.windowStart, oldestAllowed))
     .run();
 }
+
+

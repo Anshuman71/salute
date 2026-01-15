@@ -6,16 +6,17 @@
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "bun run migrate.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "drizzle-orm": "^0.38.4",
     "elysia": "^1.2.0",
-    "drizzle-orm": "^0.38.0"
+    "nanoid": "^5.1.6"
   },
   "devDependencies": {
     "bun-types": "^1.0.0",
-    "drizzle-kit": "^0.30.0",
+    "drizzle-kit": "^0.30.6",
     "typescript": "^5.0.0"
   }
 }

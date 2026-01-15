@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useMemo, useEffect } from 'react';
-import { GameState, Card as CardType } from '../game/types';
-import { calculateHandScore, getRoundSequence } from '../game/deck';
-import { soundManager } from '../game/sounds';
-import Card from './Card';
-import PlayerHand from './PlayerHand';
+import { useState, useMemo, useEffect } from "react";
+import { GameState, Card as CardType } from "../game/types";
+import { calculateHandScore, getRoundSequence } from "../game/deck";
+import { soundManager } from "../game/sounds";
+import Card from "./Card";
+import PlayerHand from "./PlayerHand";
 
 interface ExtendedGameState extends GameState {
-  turnPhase: 'play' | 'draw';
+  turnPhase: "play" | "draw";
   lastPlayedCards: CardType[];
   turnsPlayedThisRound: number;
   lastPlayerWhoPlayed: string | null;
@@ -35,19 +35,21 @@ export default function GameBoard({
   resetGame,
   playerId,
 }: GameBoardProps) {
-  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(
+    new Set()
+  );
 
   const currentPlayer = state.players[state.currentPlayerIndex];
   const isMyTurn = playerId ? currentPlayer?.id === playerId : true;
-  const topDiscardCard = state.discardPile[state.discardPile.length - 1];
   const roundSequence = getRoundSequence(state.totalRounds);
-  const isPlayPhase = state.turnPhase === 'play';
-  const isDrawPhase = state.turnPhase === 'draw';
+  const isPlayPhase = state.turnPhase === "play";
+  const isDrawPhase = state.turnPhase === "draw";
 
   // Check if all players have played at least once AND current player didn't just play
-  const canDeclareWin = state.turnsPlayedThisRound >= state.players.length 
-    && currentPlayer?.id !== state.lastPlayerWhoPlayed
-    && isMyTurn;
+  const canDeclareWin =
+    state.turnsPlayedThisRound >= state.players.length &&
+    currentPlayer?.id !== state.lastPlayerWhoPlayed &&
+    isMyTurn;
 
   // Get last 3 cards from discard pile for stacked display
   const stackedDiscardCards = state.discardPile.slice(-3);
@@ -56,7 +58,7 @@ export default function GameBoard({
   const cardsByRank = useMemo(() => {
     if (!currentPlayer) return new Map<string, CardType[]>();
     const map = new Map<string, CardType[]>();
-    currentPlayer.hand.forEach(card => {
+    currentPlayer.hand.forEach((card) => {
       const existing = map.get(card.rank) || [];
       map.set(card.rank, [...existing, card]);
     });
@@ -82,24 +84,25 @@ export default function GameBoard({
     }
 
     // Toggle selection for cards with duplicates
-    setSelectedCardIds(prev => {
+    setSelectedCardIds((prev) => {
       const next = new Set(prev);
       if (next.has(card.id)) {
         next.delete(card.id);
       } else {
         // Only allow selecting cards of the same rank
         const sameRankCards = cardsByRank.get(card.rank) || [];
-        const sameRankIds = new Set(sameRankCards.map(c => c.id));
-        
+
         // If selecting a different rank, clear previous selection
         const currentSelection = Array.from(next);
         if (currentSelection.length > 0) {
-          const firstSelectedCard = currentPlayer.hand.find(c => c.id === currentSelection[0]);
+          const firstSelectedCard = currentPlayer.hand.find(
+            (c) => c.id === currentSelection[0]
+          );
           if (firstSelectedCard && firstSelectedCard.rank !== card.rank) {
             next.clear();
           }
         }
-        
+
         next.add(card.id);
       }
       return next;
@@ -133,12 +136,12 @@ export default function GameBoard({
   };
 
   // Scoring phase
-  if (state.roundPhase === 'scoring') {
-    const scores = state.players.map(p => ({
+  if (state.roundPhase === "scoring") {
+    const scores = state.players.map((p) => ({
       player: p,
       score: calculateHandScore(p.hand),
     }));
-    const minScore = Math.min(...scores.map(s => s.score));
+    const minScore = Math.min(...scores.map((s) => s.score));
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6 flex flex-col items-center justify-center">
@@ -146,49 +149,68 @@ export default function GameBoard({
           <h2 className="text-3xl font-bold text-center text-white mb-6">
             Round {state.currentRound} Complete! 🎉
           </h2>
-          
-          <div className="space-y-4 mb-6">
-            {scores.sort((a, b) => a.score - b.score).map(({ player, score }) => (
-              <div
-                key={player.id}
-                className={`
-                  p-4 rounded-xl flex justify-between items-center
-                  ${score === minScore ? 'bg-emerald-500/30 border-2 border-emerald-400' : 'bg-white/5'}
-                `}
-              >
-                <div className="flex items-center gap-3">
-                  {score === minScore && <span className="text-2xl">👑</span>}
-                  <span className="text-white font-medium">{player.name}</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex gap-1">
-                    {player.hand.map(card => (
-                      <Card key={card.id} card={card} small />
-                    ))}
-                  </div>
-                  <span className={`text-xl font-bold ${score === minScore ? 'text-emerald-400' : 'text-gray-300'}`}>
-                    {score} pts
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
 
-          <button
-            onClick={nextRound}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-pink-500 to-purple-500 text-white font-bold text-xl shadow-lg hover:shadow-xl transition-all duration-300"
-          >
-            {state.currentRound < roundSequence.length ? 'Next Round →' : 'See Final Results'}
-          </button>
+          <div className="space-y-4 mb-6">
+            {scores
+              .sort((a, b) => a.score - b.score)
+              .map(({ player, score }) => (
+                <div
+                  key={player.id}
+                  className={`
+                  p-4 rounded-xl flex justify-between items-center
+                  ${
+                    score === minScore
+                      ? "bg-emerald-500/30 border-2 border-emerald-400"
+                      : "bg-white/5"
+                  }
+                `}
+                >
+                  <div className="flex items-center gap-3">
+                    {score === minScore && <span className="text-2xl">👑</span>}
+                    <span className="text-white font-medium">
+                      {player.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex gap-1">
+                      {player.hand.map((card) => (
+                        <Card key={card.id} card={card} small />
+                      ))}
+                    </div>
+                    <span
+                      className={`text-xl font-bold ${
+                        score === minScore
+                          ? "text-emerald-400"
+                          : "text-gray-300"
+                      }`}
+                    >
+                      {score} pts
+                    </span>
+                  </div>
+                </div>
+              ))}
+          </div>
+          {playerId === state.hostPlayerId && (
+            <button
+              onClick={nextRound}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-pink-500 to-purple-500 text-white font-bold text-xl shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              {state.currentRound < roundSequence.length
+                ? "Next Round →"
+                : "See Final Results"}
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
   // Game finished
-  if (state.roundPhase === 'finished' && state.gameWinner) {
-    const sortedPlayers = [...state.players].sort((a, b) => b.roundsWon - a.roundsWon);
-    
+  if (state.roundPhase === "finished" && state.gameWinner) {
+    const sortedPlayers = [...state.players].sort(
+      (a, b) => b.roundsWon - a.roundsWon
+    );
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6 flex flex-col items-center justify-center">
         <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 max-w-lg w-full border border-white/20 text-center">
@@ -197,7 +219,8 @@ export default function GameBoard({
             Game Over!
           </h2>
           <p className="text-2xl text-white mb-6">
-            {state.gameWinner.name} wins with {state.gameWinner.roundsWon} rounds!
+            {state.gameWinner.name} wins with {state.gameWinner.roundsWon}{" "}
+            rounds!
           </p>
 
           <div className="space-y-2 mb-8">
@@ -206,13 +229,30 @@ export default function GameBoard({
                 key={player.id}
                 className={`
                   p-3 rounded-xl flex justify-between items-center
-                  ${idx === 0 ? 'bg-amber-500/30' : idx === 1 ? 'bg-gray-400/20' : idx === 2 ? 'bg-orange-700/20' : 'bg-white/5'}
+                  ${
+                    idx === 0
+                      ? "bg-amber-500/30"
+                      : idx === 1
+                      ? "bg-gray-400/20"
+                      : idx === 2
+                      ? "bg-orange-700/20"
+                      : "bg-white/5"
+                  }
                 `}
               >
                 <span className="text-white">
-                  {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`} {player.name}
+                  {idx === 0
+                    ? "🥇"
+                    : idx === 1
+                    ? "🥈"
+                    : idx === 2
+                    ? "🥉"
+                    : `${idx + 1}.`}{" "}
+                  {player.name}
                 </span>
-                <span className="text-amber-400 font-bold">{player.roundsWon} rounds</span>
+                <span className="text-amber-400 font-bold">
+                  {player.roundsWon} rounds
+                </span>
               </div>
             ))}
           </div>
@@ -236,7 +276,8 @@ export default function GameBoard({
         <div>
           <h1 className="text-2xl font-bold text-white">🃏 Salute!</h1>
           <p className="text-gray-400 text-sm">
-            Round {state.currentRound}/{roundSequence.length} • {state.cardsPerRound} cards
+            Round {state.currentRound}/{roundSequence.length} •{" "}
+            {state.cardsPerRound} cards
           </p>
         </div>
         <button
@@ -244,11 +285,17 @@ export default function GameBoard({
           disabled={!canDeclareWin}
           className={`
             px-6 py-3 rounded-xl font-bold shadow-lg transition-all duration-300
-            ${canDeclareWin 
-              ? 'bg-gradient-to-r from-amber-500 to-pink-500 text-white hover:shadow-xl hover:scale-105' 
-              : 'bg-gray-600 text-gray-400 cursor-not-allowed'}
+            ${
+              canDeclareWin
+                ? "bg-gradient-to-r from-amber-500 to-pink-500 text-white hover:shadow-xl hover:scale-105"
+                : "bg-gray-600 text-gray-400 cursor-not-allowed"
+            }
           `}
-          title={!canDeclareWin ? 'All players must play at least one card first' : 'Declare victory!'}
+          title={
+            !canDeclareWin
+              ? "All players must play at least one card first"
+              : "Declare victory!"
+          }
         >
           🎯 I Win!
         </button>
@@ -257,11 +304,14 @@ export default function GameBoard({
       {/* Turn Indicator */}
       <div className="mb-4 p-3 rounded-xl bg-white/10 border border-white/20 text-center">
         <span className="text-white font-medium">
-          {currentPlayer?.name}&apos;s turn — 
+          {currentPlayer?.name}&apos;s turn —
           {isPlayPhase ? (
             <span className="text-amber-400"> Play a card</span>
           ) : (
-            <span className="text-emerald-400"> Pick a card from deck or discard</span>
+            <span className="text-emerald-400">
+              {" "}
+              Pick a card from deck or discard
+            </span>
           )}
         </span>
       </div>
@@ -272,12 +322,21 @@ export default function GameBoard({
         <div className="lg:col-span-1 flex lg:flex-col gap-6 justify-center items-center bg-white/5 rounded-2xl p-4 border border-white/10">
           {/* Deck */}
           <div className="text-center">
-            <p className="text-gray-400 text-sm mb-2">Deck ({state.deck.length})</p>
-            <div 
-              className={`transition-all duration-200 ${isDrawPhase ? 'cursor-pointer hover:scale-105 ring-2 ring-emerald-400/50 rounded-lg' : 'opacity-60 cursor-not-allowed'}`}
+            <p className="text-gray-400 text-sm mb-2">
+              Deck ({state.deck.length})
+            </p>
+            <div
+              className={`transition-all duration-200 ${
+                isDrawPhase
+                  ? "cursor-pointer hover:scale-105 ring-2 ring-emerald-400/50 rounded-lg"
+                  : "opacity-60 cursor-not-allowed"
+              }`}
               onClick={() => handleDraw(true)}
             >
-              <Card card={{ id: 'deck', suit: 'spades', rank: 'A', value: 1 }} faceDown />
+              <Card
+                card={{ id: "deck", suit: "spades", rank: "A", value: 1 }}
+                faceDown
+              />
             </div>
           </div>
 
@@ -286,7 +345,7 @@ export default function GameBoard({
             <div className="text-center">
               <p className="text-pink-400 text-sm mb-2">Just played</p>
               <div className="flex gap-1 justify-center">
-                {state.lastPlayedCards.map(card => (
+                {state.lastPlayedCards.map((card) => (
                   <Card key={card.id} card={card} small />
                 ))}
               </div>
@@ -295,22 +354,30 @@ export default function GameBoard({
 
           {/* Discard Pile - Stacked with rotation */}
           <div className="text-center">
-            <p className="text-gray-400 text-sm mb-2">Discard ({state.discardPile.length})</p>
+            <p className="text-gray-400 text-sm mb-2">
+              Discard ({state.discardPile.length})
+            </p>
             {stackedDiscardCards.length > 0 ? (
-              <div 
-                className={`relative w-24 h-32 transition-all duration-200 ${isDrawPhase ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+              <div
+                className={`relative w-24 h-32 transition-all duration-200 ${
+                  isDrawPhase ? "cursor-pointer" : "cursor-not-allowed"
+                }`}
                 onClick={() => handleDraw(false)}
               >
                 {stackedDiscardCards.map((card, index) => {
                   const isTop = index === stackedDiscardCards.length - 1;
-                  const rotation = (index - 1) * 15; // -15, 0, 15 degrees
+                  const rotation = index * 15; // -15, 0, 15 degrees
                   const zIndex = index;
-                  
+
                   return (
                     <div
                       key={card.id}
-                      className={`absolute left-1/2 top-0 -translate-x-1/2 transition-all duration-200 ${isTop && isDrawPhase ? 'ring-2 ring-emerald-400/50 rounded-lg hover:scale-105' : ''}`}
-                      style={{ 
+                      className={`absolute left-1/2 top-0 -translate-x-1/2 transition-all duration-200 ${
+                        isTop && isDrawPhase
+                          ? "ring-2 ring-emerald-400/50 rounded-lg hover:scale-105"
+                          : ""
+                      }`}
+                      style={{
                         transform: `translateX(-50%) rotate(${rotation}deg)`,
                         zIndex,
                       }}
@@ -331,18 +398,33 @@ export default function GameBoard({
         {/* Players */}
         <div className="lg:col-span-2 space-y-4">
           {state.players.map((player, idx) => {
-            const isMe = playerId ? player.id === playerId : idx === state.currentPlayerIndex;
+            const isMe = playerId
+              ? player.id === playerId
+              : idx === state.currentPlayerIndex;
             return (
               <PlayerHand
                 key={player.id}
                 cards={player.hand}
                 isCurrentPlayer={idx === state.currentPlayerIndex}
-                selectedCardIds={idx === state.currentPlayerIndex && isMyTurn ? selectedCardIds : new Set()}
+                selectedCardIds={
+                  idx === state.currentPlayerIndex && isMyTurn
+                    ? selectedCardIds
+                    : new Set()
+                }
                 onCardClick={handleCardClick}
-                playerName={player.name + (playerId && player.id === playerId ? ' (You)' : '')}
+                playerName={
+                  player.name +
+                  (playerId && player.id === playerId ? " (You)" : "")
+                }
                 roundsWon={player.roundsWon}
-                canInteract={idx === state.currentPlayerIndex && isPlayPhase && isMyTurn}
-                cardsByRank={idx === state.currentPlayerIndex && isMyTurn ? cardsByRank : new Map()}
+                canInteract={
+                  idx === state.currentPlayerIndex && isPlayPhase && isMyTurn
+                }
+                cardsByRank={
+                  idx === state.currentPlayerIndex && isMyTurn
+                    ? cardsByRank
+                    : new Map()
+                }
               />
             );
           })}
@@ -356,7 +438,8 @@ export default function GameBoard({
             onClick={handlePlaySelected}
             className="px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-lg shadow-2xl hover:shadow-xl transition-all duration-300 hover:scale-105"
           >
-            Play {selectedCardIds.size} Card{selectedCardIds.size > 1 ? 's' : ''} 🎴
+            Play {selectedCardIds.size} Card
+            {selectedCardIds.size > 1 ? "s" : ""} 🎴
           </button>
         </div>
       )}

@@ -15,6 +15,7 @@ import {
   addConnection,
   getConnections,
   getSanitizedStateForPlayer,
+  updateRoomSettings,
 } from './rooms';
 import { db, schema } from '../db';
 import { eq } from 'drizzle-orm';
@@ -28,7 +29,7 @@ interface WSData {
 
 export function handleMessage(ws: ServerWebSocket<WSData>, message: any): void {
   let parsed: ClientMessage;
-  
+
   if (typeof message === 'object' && message !== null && !Buffer.isBuffer(message) && !(message instanceof Uint8Array)) {
     parsed = message;
   } else {
@@ -36,29 +37,41 @@ export function handleMessage(ws: ServerWebSocket<WSData>, message: any): void {
       const str = typeof message === 'string' ? message : Buffer.from(message).toString();
       parsed = JSON.parse(str);
     } catch {
-      console.error(`[WS] Invalid JSON from ${ws.data.sessionId}:`, message);
+      console.error(`[WS] Invalid JSON from ${ws.data.playerId}:`, message);
       sendError(ws, 'Invalid JSON');
       return;
     }
   }
-  
-  console.log(`[WS] Message from ${ws.data.sessionId} (${ws.data.roomCode || 'no room'}):`, parsed.type);
-  
+
+  const { ip } = ws.data;
+  const { playerId, roomCode, } = parsed;
+
+  console.log(`[WS] Message from ${playerId} (${roomCode || 'no room'}):`, parsed.type);
+
   try {
-    const { sessionId, ip } = ws.data;
-    
+
     switch (parsed.type) {
       case 'create_room': {
-        console.log(`[Room] create_room hit for session ${sessionId}`);
+        console.log(`[Room] create_room hit for session ${playerId}`);
         const rateCheck = checkRateLimit(ip, 'create_room');
         if (!rateCheck.allowed) {
           sendError(ws, `Rate limited. Try again in ${Math.ceil((rateCheck.retryAfterMs || 0) / 60000)} minutes.`);
           return;
         }
-        
+
+        if (!playerId) {
+          sendError(ws, 'Invalid player ID');
+          return;
+        }
+
         const roomCode = generateRoomCode();
-        const result = createRoom(roomCode, parsed.playerName, sessionId, parsed.settings);
-        
+        // Use provided settings or defaults
+        const settings = parsed.settings || { totalRounds: 5, maxPlayers: 6 };
+        // Use provided name or default "Host"
+        const playerName = parsed.playerName || 'Host';
+
+        const result = createRoom(roomCode, playerName, playerId, settings);
+
         console.log(`[Room] Logic created room ${roomCode}, saving to DB...`);
 
         // Save to DB
@@ -67,15 +80,16 @@ export function handleMessage(ws: ServerWebSocket<WSData>, message: any): void {
             code: roomCode,
             hostIp: ip,
             status: 'waiting',
-            settings: JSON.stringify(parsed.settings),
+            settings: JSON.stringify(settings),
+            gameState: JSON.stringify(result.state),
             createdAt: new Date(),
           }).returning({ id: schema.rooms.id }).get();
-          
+
           if (dbRoom) {
-            db.insert(schema.players).values({
+            db.insert(schema.roomPlayers).values({
               roomId: dbRoom.id,
               name: parsed.playerName,
-              sessionId: sessionId,
+              playerId,
               isHost: true,
             }).run();
           }
@@ -83,164 +97,195 @@ export function handleMessage(ws: ServerWebSocket<WSData>, message: any): void {
           console.error(`[DB] Error creating room/player:`, dbErr);
           // We continue anyway so the game works in-memory
         }
-        
+
         ws.data.roomCode = roomCode;
-        ws.data.playerId = result.playerId;
-        addConnection(roomCode, sessionId, ws, result.playerId);
-        
-        console.log(`[Room] Created ${roomCode} by ${parsed.playerName} (${sessionId}). Sending response.`);
-        
-        send(ws, { 
-          type: 'room_created', 
-          roomCode, 
-          playerId: result.playerId,
-          players: [{ id: result.playerId, name: parsed.playerName, isHost: true }]
+        addConnection(roomCode, playerId, ws);
+
+        console.log(`[Room] Created ${roomCode} by ${parsed.playerName} (${playerId}). Sending response.`);
+
+        send(ws, {
+          type: 'room_created',
+          roomCode,
+          playerId,
+          players: [{ id: playerId, name: parsed.playerName, isHost: true }]
         });
         broadcastGameState(roomCode);
         break;
       }
-      
+
       case 'join_room': {
         const rateCheck = checkRateLimit(ip, 'join_room');
         if (!rateCheck.allowed) {
           sendError(ws, `Rate limited. Try again in ${Math.ceil((rateCheck.retryAfterMs || 0) / 1000)} seconds.`);
           return;
         }
-        
-        const result = joinRoom(parsed.code.toUpperCase(), parsed.playerName, sessionId);
+
+        if (!playerId || !roomCode) {
+          sendError(ws, 'Invalid payload');
+          return;
+        }
+
+        const result = joinRoom(roomCode, parsed.playerName, playerId);
+
         if (!result) {
-          console.warn(`[Room] Join failed for ${parsed.code.toUpperCase()}: Room not found or in-progress`);
+          console.warn(`[Room] Join failed for ${roomCode}: Room not found or in-progress`);
           sendError(ws, 'Room not found or game already started');
           return;
         }
-        
-        ws.data.roomCode = parsed.code.toUpperCase();
-        ws.data.playerId = result.playerId;
-        addConnection(parsed.code.toUpperCase(), sessionId, ws, result.playerId);
 
-        console.log(`[Room] ${parsed.playerName} joined ${parsed.code.toUpperCase()} (${sessionId})`);
+        ws.data.roomCode = roomCode;
+        addConnection(roomCode, playerId, ws);
+
+        console.log(`[Room] ${parsed.playerName} joined ${roomCode} (${playerId})`);
 
         // Save player to DB
         try {
           const dbRoom = db.select().from(schema.rooms).where(eq(schema.rooms.code, parsed.code.toUpperCase())).get();
           if (dbRoom) {
-            db.insert(schema.players).values({
+            db.insert(schema.roomPlayers).values({
               roomId: dbRoom.id,
               name: parsed.playerName,
-              sessionId: sessionId,
+              playerId,
               isHost: false,
-            }).run();
+            }).onConflictDoUpdate({ target: schema.roomPlayers.playerId, set: { name: parsed.playerName } }).run();
           }
         } catch (dbErr) {
           console.error(`[DB] Error saving player join:`, dbErr);
         }
-        
+
         // Send join confirmation to new player
         send(ws, {
           type: 'room_joined',
-          roomCode: parsed.code.toUpperCase(),
-          playerId: result.playerId,
-          players: result.state.players.map(p => ({ id: p.id, name: p.name, isHost: result.state.players.indexOf(p) === 0 })),
+          roomCode,
+          playerId,
+          players: result.state.players.map(p => ({ id: p.id, name: p.name, isHost: playerId === result.state.hostPlayerId })),
+          settings: result.state.settings,
         });
-        
+
         // Notify other players
-        broadcastToRoom(parsed.code.toUpperCase(), sessionId, {
+        broadcastToRoom(roomCode, playerId, {
           type: 'player_joined',
           player: { id: result.playerId, name: parsed.playerName },
         });
+
+        broadcastGameState(roomCode);
         break;
       }
-      
+
       case 'start_game': {
-        const { roomCode } = ws.data;
-        if (!roomCode) {
+        if (!roomCode || !playerId) {
           sendError(ws, 'Not in a room');
           return;
         }
-        
-        const state = startGame(roomCode, sessionId);
+
+        const state = startGame(roomCode, playerId);
+        console.log(`[Room] ${playerId} started game in ${roomCode}`);
         if (!state) {
           sendError(ws, 'Cannot start game');
           return;
         }
-        
+
         // Broadcast to all players
         broadcastGameState(roomCode);
         break;
       }
-      
+
       case 'play_cards': {
-        const { roomCode, playerId } = ws.data;
         if (!roomCode || !playerId) {
           sendError(ws, 'Not in a game');
           return;
         }
-        
-        const result = playCards(roomCode, sessionId, parsed.cardIds);
+
+        const result = playCards(roomCode, playerId, parsed.cardIds);
         if ('error' in result) {
           sendError(ws, result.error);
           return;
         }
-        
+
         broadcastGameState(roomCode);
         break;
       }
-      
+
       case 'draw_card': {
-        const { roomCode, playerId } = ws.data;
         if (!roomCode || !playerId) {
           sendError(ws, 'Not in a game');
           return;
         }
-        
-        const result = drawCard(roomCode, sessionId, parsed.source);
+
+        const result = drawCard(roomCode, playerId, parsed.source);
         if ('error' in result) {
           sendError(ws, result.error);
           return;
         }
-        
+
         broadcastGameState(roomCode);
         break;
       }
-      
+
       case 'call_win': {
-        const { roomCode, playerId } = ws.data;
         if (!roomCode || !playerId) {
           sendError(ws, 'Not in a game');
           return;
         }
-        
-        const result = callWin(roomCode, sessionId);
+
+        const result = callWin(roomCode, playerId);
         if ('error' in result) {
           sendError(ws, result.error);
           return;
         }
-        
+
         broadcastGameState(roomCode);
-        
-        // If game ended, handle next round after delay
-        if (result.roundPhase === 'scoring') {
-          setTimeout(() => {
-            const nextResult = nextRound(roomCode);
-            if (nextResult && !('error' in nextResult)) {
-              broadcastGameState(roomCode);
-            }
-          }, 3000); // 3 second delay before next round
-        }
         break;
       }
-      
+
+      case 'update_settings': {
+        if (!roomCode) {
+          sendError(ws, 'Not in a room');
+          return;
+        }
+
+        const result = updateRoomSettings(roomCode, playerId, parsed.settings);
+        if ('error' in result) {
+          sendError(ws, result.error);
+          return;
+        }
+
+        broadcastGameState(result.roomCode)
+        break;
+      }
+
       case 'leave_room': {
-        const { roomCode } = ws.data;
         if (roomCode) {
-          removePlayer(roomCode, sessionId);
-          broadcastToRoom(roomCode, sessionId, {
+          removePlayer(roomCode, playerId);
+          broadcastToRoom(roomCode, playerId, {
             type: 'player_left',
             playerId: ws.data.playerId || '',
           });
         }
         ws.data.roomCode = undefined;
         ws.data.playerId = undefined;
+        break;
+      }
+
+      case 'next_round': {
+        if (!roomCode || !playerId) {
+          sendError(ws, 'Not in a game');
+          return;
+        }
+
+        const state = getRoom(roomCode)
+
+        if (!state) {
+          sendError(ws, 'Room not found');
+          return;
+        }
+
+        if (state.roundPhase === 'scoring') {
+          const nextResult = nextRound(roomCode);
+          if (nextResult && !('error' in nextResult)) {
+            broadcastGameState(roomCode);
+          }
+        }
         break;
       }
     }
@@ -270,13 +315,13 @@ function sendError(ws: ServerWebSocket<WSData>, message: string): void {
   send(ws, { type: 'error', message });
 }
 
-function broadcastToRoom(roomCode: string, excludeSessionId: string, message: ServerMessage): void {
+function broadcastToRoom(roomCode: string, excludePlayerId: string, message: ServerMessage): void {
   const connections = getConnections(roomCode);
   if (!connections) return;
-  
+
   const msgStr = JSON.stringify(message);
   for (const [sid, { ws }] of connections) {
-    if (sid !== excludeSessionId) {
+    if (sid !== excludePlayerId) {
       (ws as ServerWebSocket<WSData>).send(msgStr);
     }
   }
@@ -285,10 +330,12 @@ function broadcastToRoom(roomCode: string, excludeSessionId: string, message: Se
 function broadcastGameState(roomCode: string): void {
   const state = getRoom(roomCode);
   const connections = getConnections(roomCode);
+
   if (!state || !connections) return;
-  
+
   for (const [, { ws, playerId }] of connections) {
     const sanitized = getSanitizedStateForPlayer(state, playerId);
+    console.log(`[Room] Broadcasting game state to ${playerId} in ${roomCode}`);
     (ws as ServerWebSocket<WSData>).send(JSON.stringify({ type: 'game_state', state: sanitized }));
   }
 }

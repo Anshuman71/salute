@@ -26,7 +26,10 @@ const suitColors: Record<string, string> = {
 };
 
 export default function Card({ card, faceDown = false, selected = false, onClick, small = false, showSelectHint = false }: CardProps) {
-  if (faceDown) {
+  const isHidden = card.id.startsWith('hidden');
+  const showFaceDown = faceDown || isHidden;
+
+  if (showFaceDown) {
     return (
       <div
         className={`
@@ -36,13 +39,11 @@ export default function Card({ card, faceDown = false, selected = false, onClick
           border-2 border-white/20
           shadow-lg
           flex items-center justify-center
-          cursor-pointer
+          cursor-default
           transition-all duration-200
-          hover:scale-105 hover:shadow-xl
         `}
-        onClick={onClick}
       >
-        <div className="w-full h-full rounded-md bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNMCAwTDQwIDQwTTQwIDBMMCANDBIIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIiBzdHJva2Utd2lkdGg9IjEiLz48L3N2Zz4=')] opacity-50" />
+        <div className="w-full h-full rounded-md bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNMCAwTDQwIDQwTTQwIDBMMCANDBIIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIiBzdHJva2Utd2lkdGg9IjEiLz48L3N2Zz4=')] opacity-30" />
       </div>
     );
   }

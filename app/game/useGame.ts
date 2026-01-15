@@ -39,32 +39,36 @@ const initialState: ExtendedGameState = {
   lastPlayedCards: [],
   turnsPlayedThisRound: 0,
   lastPlayerWhoPlayed: null,
+  settings: {
+    totalRounds: 5,
+    maxPlayers: 4,
+  },
 };
 
 function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGameState {
   switch (action.type) {
     case 'START_GAME': {
       const { numPlayers, totalRounds, playerNames } = action.settings;
-      
+
       const players: Player[] = playerNames.slice(0, numPlayers).map((name, idx) => ({
         id: `player-${idx}`,
         name: name || `Player ${idx + 1}`,
         hand: [],
         roundsWon: 0,
       }));
-      
+
       const deck = shuffle(createGameDeck(numPlayers));
       const roundSequence = getRoundSequence(totalRounds);
       const cardsPerRound = roundSequence[0];
-      
+
       const { remainingDeck, hands, faceUpCard } = dealCards(deck, numPlayers, cardsPerRound);
-      
+
       // Assign hands to players
       const playersWithHands = players.map((player, idx) => ({
         ...player,
         hand: hands[idx],
       }));
-      
+
       return {
         ...state,
         players: playersWithHands,
@@ -86,22 +90,22 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
 
     case 'PLAY_CARDS': {
       if (state.turnPhase !== 'play') return state;
-      
+
       const currentPlayer = state.players[state.currentPlayerIndex];
       const cardsToPlay = currentPlayer.hand.filter(c => action.cardIds.includes(c.id));
-      
+
       if (cardsToPlay.length === 0) return state;
-      
+
       // Verify all cards have the same rank (for multi-card play)
       const firstRank = cardsToPlay[0].rank;
       if (!cardsToPlay.every(c => c.rank === firstRank)) return state;
-      
+
       const newHand = currentPlayer.hand.filter(c => !action.cardIds.includes(c.id));
-      
+
       const updatedPlayers = state.players.map((player, idx) =>
         idx === state.currentPlayerIndex ? { ...player, hand: newHand } : player
       );
-      
+
       return {
         ...state,
         players: updatedPlayers,
@@ -113,22 +117,22 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
     case 'DRAW_FROM_DECK': {
       if (state.turnPhase !== 'draw') return state;
       if (state.deck.length === 0) return state;
-      
+
       const [drawnCard, ...remainingDeck] = state.deck;
       const currentPlayer = state.players[state.currentPlayerIndex];
-      
+
       const updatedPlayers = state.players.map((player, idx) =>
         idx === state.currentPlayerIndex
           ? { ...player, hand: [...player.hand, drawnCard] }
           : player
       );
-      
+
       // Add played cards to discard pile now
       const newDiscardPile = [...state.discardPile, ...state.lastPlayedCards];
-      
+
       // Move to next player
       const nextPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
-      
+
       return {
         ...state,
         players: updatedPlayers,
@@ -145,25 +149,25 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
     case 'DRAW_FROM_DISCARD': {
       if (state.turnPhase !== 'draw') return state;
       if (state.discardPile.length === 0) return state;
-      
+
       const currentPlayer = state.players[state.currentPlayerIndex];
-      
+
       // Pick the top card from discard (before the just-played cards)
       const drawnCard = state.discardPile[state.discardPile.length - 1];
       const remainingDiscard = state.discardPile.slice(0, -1);
-      
+
       const updatedPlayers = state.players.map((player, idx) =>
         idx === state.currentPlayerIndex
           ? { ...player, hand: [...player.hand, drawnCard] }
           : player
       );
-      
+
       // Add played cards to discard pile (replacing the picked card)
       const newDiscardPile = [...remainingDiscard, ...state.lastPlayedCards];
-      
+
       // Move to next player
       const nextPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
-      
+
       return {
         ...state,
         players: updatedPlayers,
@@ -182,18 +186,18 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
         player,
         score: calculateHandScore(player.hand),
       }));
-      
+
       // Find minimum score
       const minScore = Math.min(...scoresWithPlayers.map(s => s.score));
-      
+
       // Find players with minimum score
       const potentialWinners = scoresWithPlayers.filter(s => s.score === minScore);
-      
+
       // Caller for this round
       const caller = state.players.find(p => p.id === action.playerId)!;
-      
+
       let roundWinner: Player;
-      
+
       if (potentialWinners.length === 1) {
         // Only one player with the lowest score
         roundWinner = potentialWinners[0].player;
@@ -202,23 +206,23 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
         const callerInWinners = potentialWinners.find(s => s.player.id === action.playerId);
         roundWinner = callerInWinners ? caller : potentialWinners[0].player;
       }
-      
+
       // Update player's wins
       const updatedPlayers = state.players.map(player =>
         player.id === roundWinner.id
           ? { ...player, roundsWon: player.roundsWon + 1 }
           : player
       );
-      
+
       // Check if this was the last round
       const roundSequence = getRoundSequence(state.totalRounds);
       const isLastRound = state.currentRound >= roundSequence.length;
-      
+
       if (isLastRound) {
         // Find overall winner
         const maxWins = Math.max(...updatedPlayers.map(p => p.roundsWon));
         const gameWinner = updatedPlayers.find(p => p.roundsWon === maxWins)!;
-        
+
         return {
           ...state,
           players: updatedPlayers,
@@ -226,7 +230,7 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
           gameWinner,
         };
       }
-      
+
       return {
         ...state,
         players: updatedPlayers,
@@ -237,31 +241,31 @@ function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGame
     case 'NEXT_ROUND': {
       const roundSequence = getRoundSequence(state.totalRounds);
       const nextRound = state.currentRound + 1;
-      
+
       if (nextRound > roundSequence.length) {
         // Game over
         const maxWins = Math.max(...state.players.map(p => p.roundsWon));
         const gameWinner = state.players.find(p => p.roundsWon === maxWins)!;
-        
+
         return {
           ...state,
           roundPhase: 'finished',
           gameWinner,
         };
       }
-      
+
       const cardsPerRound = roundSequence[nextRound - 1];
-      
+
       // Create fresh deck
       const deck = shuffle(createGameDeck(state.players.length));
       const { remainingDeck, hands, faceUpCard } = dealCards(deck, state.players.length, cardsPerRound);
-      
+
       // Reset hands for all players
       const playersWithNewHands = state.players.map((player, idx) => ({
         ...player,
         hand: hands[idx],
       }));
-      
+
       return {
         ...state,
         players: playersWithNewHands,

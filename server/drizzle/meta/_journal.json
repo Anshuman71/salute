@@ -15,6 +15,20 @@
       "when": 1768322557637,
       "tag": "0001_acoustic_clea",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1768372186152,
+      "tag": "0002_unique_wilson_fisk",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1768457200339,
+      "tag": "0003_hard_inhumans",
+      "breakpoints": true
     }
   ]
 }

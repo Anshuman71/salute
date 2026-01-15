@@ -1,4 +1,5 @@
 import type { Card, Suit, Rank } from './types';
+import { customAlphabet } from 'nanoid';
 
 const SUITS: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
 const RANKS: Rank[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -25,7 +26,7 @@ function createStandardDeck(idPrefix: string = ''): Card[] {
 
 export function createGameDeck(numPlayers: number): Card[] {
   let deck = createStandardDeck('deck1-');
-  
+
   if (numPlayers > 2) {
     const extraDecksNeeded = numPlayers - 2;
     for (let i = 0; i < extraDecksNeeded; i++) {
@@ -34,7 +35,7 @@ export function createGameDeck(numPlayers: number): Card[] {
       deck = [...deck, ...shuffled.slice(0, 26)];
     }
   }
-  
+
   return deck;
 }
 
@@ -54,7 +55,7 @@ export function dealCards(
 ): { remainingDeck: Card[]; hands: Card[][]; faceUpCard: Card | null } {
   const hands: Card[][] = Array.from({ length: numPlayers }, () => []);
   let deckCopy = [...deck];
-  
+
   for (let cardNum = 0; cardNum < cardsPerPlayer; cardNum++) {
     for (let playerIdx = 0; playerIdx < numPlayers; playerIdx++) {
       if (deckCopy.length > 0) {
@@ -62,9 +63,9 @@ export function dealCards(
       }
     }
   }
-  
+
   const faceUpCard = deckCopy.length > 0 ? deckCopy.shift()! : null;
-  
+
   return { remainingDeck: deckCopy, hands, faceUpCard };
 }
 
@@ -86,15 +87,4 @@ export function getRoundSequence(totalRounds: number): number[] {
   return sequence;
 }
 
-export function generateRoomCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid ambiguous chars
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
-}
-
-export function generatePlayerId(): string {
-  return `player-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
+export const generateRoomCode = customAlphabet('ABCDEFGHJKLMNPQRSTUVWXYZ123456789', 6); // Avoid ambiguous chars

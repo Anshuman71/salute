@@ -7,17 +7,17 @@ export const rooms = sqliteTable('rooms', {
   hostIp: text('host_ip').notNull(),
   status: text('status', { enum: ['waiting', 'playing', 'finished'] }).notNull().default('waiting'),
   settings: text('settings').notNull(), // JSON string: {totalRounds, numPlayers}
+  gameState: text('game_state'), // JSON string: Full GameState object for persistence
   currentRound: integer('current_round').notNull().default(0),
-  winnerId: integer('winner_id').references((): AnySQLiteColumn => players.id),
+  winnerId: text('winner_id').references((): AnySQLiteColumn => roomPlayers.playerId),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn((): Date => new Date()),
 });
 
 // Players in rooms
-export const players = sqliteTable('players', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const roomPlayers = sqliteTable('room_players', {
   roomId: integer('room_id').notNull().references((): AnySQLiteColumn => rooms.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
-  sessionId: text('session_id').notNull().unique(), // WebSocket session identifier
+  playerId: text('player_id').notNull().unique(), // Player identifier
   isHost: integer('is_host', { mode: 'boolean' }).notNull().default(false),
   joinedAt: integer('joined_at', { mode: 'timestamp' }).notNull().$defaultFn((): Date => new Date()),
 });
@@ -27,7 +27,7 @@ export const gameRounds = sqliteTable('game_rounds', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   roomId: integer('room_id').notNull().references((): AnySQLiteColumn => rooms.id, { onDelete: 'cascade' }),
   roundNumber: integer('round_number').notNull(),
-  winnerId: integer('winner_id').notNull().references((): AnySQLiteColumn => players.id),
+  winnerId: text('winner_id').notNull().references((): AnySQLiteColumn => roomPlayers.playerId),
   scores: text('scores').notNull(), // JSON string: {playerName: score}
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn((): Date => new Date()),
 });
@@ -44,6 +44,6 @@ export const rateLimits = sqliteTable('rate_limits', {
 // Types
 export type Room = typeof rooms.$inferSelect;
 export type NewRoom = typeof rooms.$inferInsert;
-export type Player = typeof players.$inferSelect;
-export type NewPlayer = typeof players.$inferInsert;
+export type Player = typeof roomPlayers.$inferSelect;
+export type NewPlayer = typeof roomPlayers.$inferInsert;
 export type RateLimit = typeof rateLimits.$inferSelect;
