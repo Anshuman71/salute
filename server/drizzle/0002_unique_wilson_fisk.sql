@@ -1,1 +1,0 @@
-ALTER TABLE `rooms` ADD `game_state` text;
