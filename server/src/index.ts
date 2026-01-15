@@ -2,6 +2,7 @@ import { Elysia } from 'elysia';
 import { handleMessage, handleClose } from './ws/handlers';
 import { cleanupRateLimits } from './ws/rateLimit';
 import { cleanupRooms } from './ws/rooms';
+import { db } from './db';
 
 const PORT = process.env.PORT || 3001;
 
@@ -41,6 +42,12 @@ const day = 24 * hour;
 setInterval(cleanupRateLimits, hour);
 
 setInterval(cleanupRooms, day);
+
+process.on("SIGTERM", () => {
+  console.log("Received SIGTERM");
+  db.$client.close();
+  process.exit(0);
+});
 
 export type App = typeof app;
 
