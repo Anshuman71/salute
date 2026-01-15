@@ -1,9 +1,9 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useMultiplayer } from "../game/useMultiplayer";
 import GameBoard from "../components/GameBoard";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLocalStorage } from "usehooks-ts";
 
 export default function RoomPage({
@@ -11,6 +11,8 @@ export default function RoomPage({
 }: {
   params: Promise<{ roomCode: string }>;
 }) {
+  const searchParams = useSearchParams();
+  const username = searchParams.get("username");
   const resolvedParams = use(params);
   const roomCode = resolvedParams.roomCode.toUpperCase();
   const router = useRouter();
@@ -23,12 +25,21 @@ export default function RoomPage({
   const multiplayerGame = useMultiplayer(roomCode);
 
   const handleSetIdentity = () => {
-    if (!playerName.trim()) return;
-    setPlayerName(playerName);
-    if (multiplayerGame.isConnected) {
+    if (multiplayerGame.isConnected && playerName.trim()) {
       multiplayerGame.joinRoom(roomCode, playerName);
     }
   };
+
+  useEffect(() => {
+    if (
+      username &&
+      multiplayerGame.isConnected &&
+      !multiplayerGame.players.length
+    ) {
+      setPlayerName(username);
+      handleSetIdentity();
+    }
+  }, [username, multiplayerGame.isConnected]);
 
   const isHost =
     multiplayerGame.players.find((p) => p.id === multiplayerGame.playerId)

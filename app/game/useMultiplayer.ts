@@ -41,14 +41,11 @@ export function useMultiplayer(initialRoomCode?: string) {
           case 'room_created':
             setRoomCode(message.roomCode);
             setPlayers(message.players);
-            router.push(`/${message.roomCode}`);
+            router.push(`/${message.roomCode}?username=${message.players[0].name}`);
             break;
           case 'room_joined':
             setRoomCode(message.roomCode);
             setPlayers(message.players);
-            if (window.location.pathname !== `/${message.roomCode}`) {
-              router.push(`/${message.roomCode}`);
-            }
             break;
           case 'player_joined':
             setPlayers((prev) => [...prev, { ...message.player, isHost: false }]);
