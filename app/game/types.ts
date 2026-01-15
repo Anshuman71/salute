@@ -71,13 +71,13 @@ export type ClientMessage =
     | { type: 'update_settings'; settings: RoomSettings }) & BaseClientMessage;
 
 export type ServerMessage =
-  | { type: 'room_created'; roomCode: string; playerId: string; players: { id: string; name: string; isHost: boolean }[] }
-  | { type: 'room_joined'; roomCode: string; playerId: string; players: { id: string; name: string; isHost: boolean }[]; settings: RoomSettings }
-  | { type: 'room_updated'; settings: RoomSettings }
-  | { type: 'player_joined'; player: { id: string; name: string } }
-  | { type: 'player_left'; playerId: string }
-  | { type: 'game_started' }
-  | { type: 'game_state'; state: GameState }
-  | { type: 'round_ended'; scores: { playerId: string; score: number }[]; winnerId: string }
-  | { type: 'game_ended'; winnerId: string; leaderboard: { playerId: string; name: string; roundsWon: number }[] }
-  | { type: 'error'; message: string };
+  | ({ type: 'room_created'; roomCode: string; playerId: string; players: { id: string; name: string; isHost: boolean }[] }
+    | { type: 'room_joined'; roomCode: string; playerId: string; players: { id: string; name: string; isHost: boolean }[]; settings: RoomSettings }
+    | { type: 'room_updated'; settings: RoomSettings }
+    | { type: 'player_joined'; player: { id: string; name: string } }
+    | { type: 'player_left'; playerId: string }
+    | { type: 'game_started' }
+    | { type: 'game_state'; state: GameState }
+    | { type: 'round_ended'; scores: { playerId: string; score: number }[]; winnerId: string }
+    | { type: 'game_ended'; winnerId: string; leaderboard: { playerId: string; name: string; roundsWon: number }[] }
+    | { type: 'error'; message: string }) & { timestamp: number };

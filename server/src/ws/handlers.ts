@@ -307,7 +307,7 @@ export function handleClose(ws: ServerWebSocket<WSData>): void {
 }
 
 function send(ws: ServerWebSocket<WSData>, message: ServerMessage): void {
-  ws.send(JSON.stringify(message));
+  ws.send(JSON.stringify({ ...message, timestamp: Date.now() }));
 }
 
 function sendError(ws: ServerWebSocket<WSData>, message: string): void {

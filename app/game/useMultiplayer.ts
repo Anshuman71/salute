@@ -35,7 +35,7 @@ export function useMultiplayer(initialRoomCode?: string) {
 
       ws.onmessage = (event) => {
         const message: ServerMessage = JSON.parse(event.data);
-        console.log('Received message:', message);
+        console.log('Message age:', Date.now() - message.timestamp);
 
         switch (message.type) {
           case 'room_created':
