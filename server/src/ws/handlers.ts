@@ -319,10 +319,9 @@ function broadcastToRoom(roomCode: string, excludePlayerId: string, message: Ser
   const connections = getConnections(roomCode);
   if (!connections) return;
 
-  const msgStr = JSON.stringify(message);
   for (const [sid, { ws }] of connections) {
     if (sid !== excludePlayerId) {
-      (ws as ServerWebSocket<WSData>).send(msgStr);
+      send(ws as ServerWebSocket<WSData>, message);
     }
   }
 }
@@ -336,6 +335,6 @@ function broadcastGameState(roomCode: string): void {
   for (const [, { ws, playerId }] of connections) {
     const sanitized = getSanitizedStateForPlayer(state, playerId);
     console.log(`[Room] Broadcasting game state to ${playerId} in ${roomCode}`);
-    (ws as ServerWebSocket<WSData>).send(JSON.stringify({ type: 'game_state', state: sanitized }));
+    (ws as ServerWebSocket<WSData>).send(JSON.stringify({ type: 'game_state', state: sanitized, timestamp: Date.now() }));
   }
 }
