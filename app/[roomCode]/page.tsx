@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useMultiplayer } from "../game/useMultiplayer";
 import GameBoard from "../components/GameBoard";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,7 @@ export default function RoomPage({
     "salute_player_name",
     ""
   );
+  const [copied, setCopied] = useState(false);
   const multiplayerGame = useMultiplayer(roomCode);
 
   const handleSetIdentity = () => {
@@ -129,13 +130,31 @@ export default function RoomPage({
         ) : (
           <>
             <h2 className="text-3xl font-bold text-white mb-2">Game Lobby</h2>
-            <div className="bg-white/5 rounded-2xl py-4 mb-6">
+            <div className="bg-white/5 rounded-2xl py-4 mb-6 relative">
               <p className="text-gray-400 text-sm uppercase tracking-widest mb-1">
                 Room Code
               </p>
-              <p className="text-5xl font-black text-amber-400 tracking-widest">
-                {roomCode}
-              </p>
+              <div className="flex items-center justify-center gap-3">
+                <p className="text-5xl font-black text-amber-400 tracking-widest">
+                  {roomCode}
+                </p>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 3000);
+                  }}
+                  className="p-2 rounded-lg px-4 bg-white/10 hover:bg-white/20 text-white transition-all hover:scale-110 active:scale-95"
+                  title="Copy Room URL"
+                >
+                  {copied ? "✅" : "🔗"}
+                </button>
+              </div>
+              {copied && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1 rounded-full bg-emerald-500/90 text-white text-xs font-bold animate-fade-in-up">
+                  Link copied!
+                </div>
+              )}
             </div>
 
             <div className="space-y-3 mb-8">
