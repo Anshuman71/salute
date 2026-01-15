@@ -39,6 +39,7 @@ const initialState: ExtendedGameState = {
   lastPlayedCards: [],
   turnsPlayedThisRound: 0,
   lastPlayerWhoPlayed: null,
+  hostPlayerId: "",
   settings: {
     totalRounds: 5,
     maxPlayers: 4,
