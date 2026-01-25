@@ -216,7 +216,7 @@ export default function GameBoard({
         <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 max-w-lg w-full border border-white/20 text-center">
           <div className="text-6xl mb-4">🏆</div>
           <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-pink-500 mb-2">
-            Game Over!
+            Game Finished!
           </h2>
           <p className="text-2xl text-white mb-6">
             {state.gameWinner.name} wins with {state.gameWinner.roundsWon}{" "}
