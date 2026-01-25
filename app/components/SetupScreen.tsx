@@ -55,7 +55,7 @@ export default function SetupScreen({ onCreateRoom, onJoinRoom, isConnected, err
             </button>
             {!isConnected && (
               <p className="text-rose-400 text-center text-sm font-medium animate-pulse">
-                Offline: Could not connect to server
+                Connecting to the server...
               </p>
             )}
           </div>

@@ -61,7 +61,7 @@ export interface BaseClientMessage {
 // WebSocket message types
 export type ClientMessage =
   (| { type: 'create_room'; playerName: string; settings: RoomSettings }
-    | { type: 'join_room'; code: string; playerName: string }
+    | { type: 'join_room'; playerName: string }
     | { type: 'start_game'; }
     | { type: 'play_cards'; cardIds: string[] }
     | { type: 'draw_card'; source: 'deck' | 'discard' }

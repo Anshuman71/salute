@@ -116,8 +116,8 @@ export function useMultiplayer(initialRoomCode?: string) {
     send({ type: 'update_settings', settings, playerId, roomCode });
   }, [send, playerId, roomCode]);
 
-  const joinRoom = useCallback((code: string, playerName: string) => {
-    send({ type: 'join_room', code, playerName, playerId, roomCode });
+  const joinRoom = useCallback((roomCode: string, playerName: string) => {
+    send({ type: 'join_room', playerName, playerId, roomCode });
   }, [send, playerId, roomCode]);
 
   const startGame = useCallback(() => {

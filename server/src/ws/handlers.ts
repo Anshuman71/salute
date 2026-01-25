@@ -121,7 +121,7 @@ export function handleMessage(ws: ServerWebSocket<WSData>, message: any): void {
         }
 
         if (!playerId || !roomCode) {
-          sendError(ws, 'Invalid payload');
+          sendError(ws, `Cannot join room ${roomCode} with player ${playerId}`);
           return;
         }
 
