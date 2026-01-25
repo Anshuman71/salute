@@ -219,8 +219,8 @@ export function callWin(roomCode: string, playerId: string): GameState | { error
   if (potentialWinners.length === 1) {
     roundWinner = potentialWinners[0].player;
   } else {
-    const callerInWinners = potentialWinners.find(s => s.player.id === caller.id);
-    roundWinner = callerInWinners ? caller : potentialWinners[0].player;
+    // if scores tie than make the other player winner
+    roundWinner = potentialWinners.find(s => s.player.id !== caller.id)?.player || potentialWinners[0].player;
   }
 
   roundWinner.roundsWon++;
