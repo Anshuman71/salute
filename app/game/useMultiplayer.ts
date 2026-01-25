@@ -46,6 +46,10 @@ export function useMultiplayer(initialRoomCode?: string) {
           case 'room_joined':
             setRoomCode(message.roomCode);
             setPlayers(message.players);
+            const me = message.players.find(p => p.id === message.playerId)
+            if(me && location.pathname !== `/${message.roomCode}`) {
+              router.push(`/${message.roomCode}?username=${me.name}`);
+            }
             break;
           case 'player_joined':
             setPlayers((prev) => [...prev, { ...message.player, isHost: false }]);
