@@ -44,6 +44,7 @@ const initialState: ExtendedGameState = {
     totalRounds: 5,
     maxPlayers: 4,
   },
+  lastRoundWinnerId: null,
 };
 
 function gameReducer(state: ExtendedGameState, action: GameAction): ExtendedGameState {
