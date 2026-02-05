@@ -30,6 +30,7 @@ export function createRoom(roomCode: string, hostName: string, playerId: string,
     gameWinner: null,
     settings,
     hostPlayerId: playerId,
+    lastRoundWinnerId: null,
   };
 
   roomConnections.set(roomCode, new Map());
@@ -225,6 +226,9 @@ export function callWin(roomCode: string, playerId: string): GameState | { error
 
   roundWinner.roundsWon++;
 
+
+  state.lastRoundWinnerId = roundWinner.id;
+
   // Record round in DB
   const dbRoom = db.select().from(schema.rooms).where(eq(schema.rooms.code, roomCode)).get();
 
@@ -304,7 +308,13 @@ export function nextRound(roomCode: string): GameState | { error: string } {
   state.cardsPerRound = cardsPerRound;
   state.roundPhase = 'playing';
   state.turnPhase = 'play';
-  state.currentPlayerIndex = 0;
+  
+  // Winner of previous round starts
+  const winnerIndex = state.lastRoundWinnerId 
+    ? state.players.findIndex(p => p.id === state.lastRoundWinnerId)
+    : 0;
+    
+  state.currentPlayerIndex = winnerIndex !== -1 ? winnerIndex : 0;
   state.turnsPlayedThisRound = 0;
   state.lastPlayerWhoPlayed = null;
   state.lastPlayedCards = [];

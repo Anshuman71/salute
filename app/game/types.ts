@@ -40,6 +40,7 @@ export interface GameState {
   gameWinner: Player | null;
   settings: RoomSettings;
   hostPlayerId: string;
+  lastRoundWinnerId: string | null;
 }
 
 export interface RoomSettings {
