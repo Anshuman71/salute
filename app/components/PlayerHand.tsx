@@ -13,6 +13,7 @@ interface PlayerHandProps {
   roundsWon: number;
   canInteract: boolean;
   cardsByRank: Map<string, CardType[]>;
+  backImage?: string;
 }
 
 export default function PlayerHand({
@@ -25,6 +26,7 @@ export default function PlayerHand({
   roundsWon,
   canInteract,
   cardsByRank,
+  backImage,
 }: PlayerHandProps) {
   // Check if a card has duplicates
   const hasDuplicates = (card: CardType) => {
@@ -71,6 +73,7 @@ export default function PlayerHand({
               selected={selectedCardIds.has(card.id)}
               onClick={canInteract ? () => onCardClick(card) : undefined}
               showSelectHint={canInteract && hasDuplicates(card)}
+              backImage={backImage}
             />
           ))
         )}

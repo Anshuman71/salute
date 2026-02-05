@@ -45,6 +45,13 @@ export default function GameBoard({
   const isPlayPhase = state.turnPhase === "play";
   const isDrawPhase = state.turnPhase === "draw";
 
+  // Deterministic card back selection
+  const backImage = useMemo(() => {
+    if (!state.roomCode) return undefined;
+    const imageIndex = (state.roomCode.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 3) + 1;
+    return `/design/${imageIndex}.jpg`;
+  }, [state.roomCode]);
+
   // Check if all players have played at least once AND current player didn't just play
   const canDeclareWin =
     state.turnsPlayedThisRound >= state.players.length &&
@@ -336,6 +343,7 @@ export default function GameBoard({
               <Card
                 card={{ id: "deck", suit: "spades", rank: "A", value: 1 }}
                 faceDown
+                backImage={backImage}
               />
             </div>
           </div>
@@ -346,7 +354,7 @@ export default function GameBoard({
               <p className="text-pink-400 text-sm mb-2">Just played</p>
               <div className="flex gap-1 justify-center">
                 {state.lastPlayedCards.map((card) => (
-                  <Card key={card.id} card={card} small />
+                  <Card key={card.id} card={card} small backImage={backImage} />
                 ))}
               </div>
             </div>
@@ -379,10 +387,9 @@ export default function GameBoard({
                       }`}
                       style={{
                         transform: `translateX(-50%) rotate(${rotation}deg)`,
-                        zIndex,
                       }}
                     >
-                      <Card card={card} />
+                      <Card card={card} backImage={backImage} />
                     </div>
                   );
                 })}
@@ -425,6 +432,7 @@ export default function GameBoard({
                     ? cardsByRank
                     : new Map()
                 }
+                backImage={backImage}
               />
             );
           })}

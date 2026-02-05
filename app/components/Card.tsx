@@ -25,7 +25,7 @@ const suitColors: Record<string, string> = {
   spades: '#1a1a2e',
 };
 
-export default function Card({ card, faceDown = false, selected = false, onClick, small = false, showSelectHint = false }: CardProps) {
+export default function Card({ card, faceDown = false, selected = false, onClick, small = false, showSelectHint = false, backImage }: CardProps & { backImage?: string }) {
   const isHidden = card.id.startsWith('hidden');
   const showFaceDown = faceDown || isHidden;
 
@@ -35,15 +35,18 @@ export default function Card({ card, faceDown = false, selected = false, onClick
         className={`
           ${small ? 'w-12 h-16' : 'w-20 h-28'}
           rounded-lg
-          bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500
+          ${backImage ? 'bg-cover bg-center' : 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500'}
           border-2 border-white/20
           shadow-lg
           flex items-center justify-center
           cursor-default
           transition-all duration-200
         `}
+        style={backImage ? { backgroundImage: `url(${backImage})` } : undefined}
       >
-        <div className="w-full h-full rounded-md bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNMCAwTDQwIDQwTTQwIDBMMCANDBIIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIiBzdHJva2Utd2lkdGg9IjEiLz48L3N2Zz4=')] opacity-30" />
+        {!backImage && (
+          <div className="w-full h-full rounded-md bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNMCAwTDQwIDQwTTQwIDBMMCANDBIIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIiBzdHJva2Utd2lkdGg9IjEiLz48L3N2Zz4=')] opacity-30" />
+        )}
       </div>
     );
   }
