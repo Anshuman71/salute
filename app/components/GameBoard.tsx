@@ -48,7 +48,7 @@ export default function GameBoard({
   // Deterministic card back selection
   const backImage = useMemo(() => {
     if (!state.roomCode) return undefined;
-    const imageIndex = (state.roomCode.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 3) + 1;
+    const imageIndex = +state.roomCode % 3 + 1;
     return `/design/${imageIndex}.jpg`;
   }, [state.roomCode]);
 
