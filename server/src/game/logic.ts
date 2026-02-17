@@ -87,4 +87,4 @@ export function getRoundSequence(totalRounds: number): number[] {
   return sequence;
 }
 
-export const generateRoomCode = customAlphabet('ABCDEFGHJKLMNPQRSTUVWXYZ123456789', 6); // Avoid ambiguous chars
+export const generateRoomCode = customAlphabet('0123456789', 4);

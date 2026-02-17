@@ -14,7 +14,7 @@ export default function RoomPage({
   const searchParams = useSearchParams();
   const username = searchParams.get("username");
   const resolvedParams = use(params);
-  const roomCode = resolvedParams.roomCode.toUpperCase();
+  const roomCode = resolvedParams.roomCode;
   const router = useRouter();
 
   const [playerName, setPlayerName] = useLocalStorage<string>(

@@ -64,7 +64,17 @@ export function handleMessage(ws: ServerWebSocket<WSData>, message: any): void {
           return;
         }
 
-        const roomCode = generateRoomCode();
+        let roomCode = generateRoomCode();
+        let attempts = 0;
+        while (getRoom(roomCode) && attempts < 10) {
+          roomCode = generateRoomCode();
+          attempts++;
+        }
+
+        if (attempts >= 10) {
+          sendError(ws, 'Failed to generate unique room code. Please try again.');
+          return;
+        }
         // Use provided settings or defaults
         const settings = parsed.settings || { totalRounds: 5, maxPlayers: 6 };
         // Use provided name or default "Host"
@@ -140,7 +150,7 @@ export function handleMessage(ws: ServerWebSocket<WSData>, message: any): void {
 
         // Save player to DB
         try {
-          const dbRoom = db.select().from(schema.rooms).where(eq(schema.rooms.code, parsed.code.toUpperCase())).get();
+          const dbRoom = db.select().from(schema.rooms).where(eq(schema.rooms.code, roomCode)).get();
           if (dbRoom) {
             db.insert(schema.roomPlayers).values({
               roomId: dbRoom.id,

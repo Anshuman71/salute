@@ -24,7 +24,7 @@ export default function SetupScreen({ onCreateRoom, onJoinRoom, isConnected, err
 
   const handleJoin = () => {
     if (!playerName || !roomCode) return;
-    onJoinRoom(roomCode.toUpperCase(), playerName);
+    onJoinRoom(roomCode, playerName);
   };
 
   if (mode === 'menu') {
@@ -98,10 +98,10 @@ export default function SetupScreen({ onCreateRoom, onJoinRoom, isConnected, err
                 <label className="block text-white font-medium mb-2">Room Code</label>
                 <input
                   type="text"
-                  placeholder="Enter 6-digit code"
+                  placeholder="Enter 4-digit code"
                   value={roomCode}
-                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                  maxLength={6}
+                  onChange={(e) => setRoomCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  maxLength={4}
                   className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 tracking-widest text-center font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/50"
                 />
               </div>
